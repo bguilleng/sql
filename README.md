@@ -42,12 +42,13 @@ Ejecuta el script de datos:
 
 ```bash
 mysql < mysql-data.sql
+```
 
 ## 3. Eliminar las tablas (opcional)
 
 ```bash
 mysql < drop-tables.sql
-
+```
 
 # Objetivo del repositorio
 
