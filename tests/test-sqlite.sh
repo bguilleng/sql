@@ -10,47 +10,32 @@ command -v sqlite3 >/dev/null 2>&1 || {
   exit 127
 }
 
+fail() {
+  echo "ERROR: $1" >&2
+  exit 1
+}
+
+assert_eq() {
+  local actual="$1"
+  local expected="$2"
+  local message="$3"
+  [[ "$actual" == "$expected" ]] || fail "$message (expected '$expected', got '$actual')"
+}
+
 cat "$ROOT_DIR/sqlite.sql" "$ROOT_DIR/sqlite-data.sql" | sqlite3 -bail "$DB"
 
 fk_errors="$(sqlite3 "$DB" "PRAGMA foreign_key_check;")"
-if [[ -n "$fk_errors" ]]; then
-  echo "ERROR: foreign key violations detected:" >&2
-  echo "$fk_errors" >&2
-  exit 1
-fi
+[[ -z "$fk_errors" ]] || fail "foreign key violations detected: $fk_errors"
 
-sqlite3 -bail "$DB" <<'SQL'
-SELECT CASE
-  WHEN (SELECT upper(type) FROM pragma_table_info('locations') WHERE name='country_id') <> 'TEXT'
-  THEN RAISE(ABORT, 'locations.country_id must be TEXT')
-END;
+assert_eq "$(sqlite3 "$DB" "SELECT upper(type) FROM pragma_table_info('locations') WHERE name='country_id';")" "TEXT"   "locations.country_id must use TEXT affinity"
+assert_eq "$(sqlite3 "$DB" "SELECT \"notnull\" FROM pragma_table_info('departments') WHERE name='location_id';")" "0"   "departments.location_id must be nullable"
+assert_eq "$(sqlite3 "$DB" "SELECT \"notnull\" FROM pragma_table_info('jobs') WHERE name='min_salary';")" "0"   "jobs.min_salary must be nullable"
+assert_eq "$(sqlite3 "$DB" "SELECT \"notnull\" FROM pragma_table_info('jobs') WHERE name='max_salary';")" "0"   "jobs.max_salary must be nullable"
+assert_eq "$(sqlite3 "$DB" "SELECT \"notnull\" FROM pragma_table_info('employees') WHERE name='department_id';")" "0"   "employees.department_id must be nullable"
 
-SELECT CASE
-  WHEN (SELECT "notnull" FROM pragma_table_info('departments') WHERE name='location_id') <> 0
-  THEN RAISE(ABORT, 'departments.location_id must be nullable')
-END;
-
-SELECT CASE
-  WHEN (SELECT "notnull" FROM pragma_table_info('jobs') WHERE name='min_salary') <> 0
-    OR (SELECT "notnull" FROM pragma_table_info('jobs') WHERE name='max_salary') <> 0
-  THEN RAISE(ABORT, 'job salary bounds must be nullable')
-END;
-
-SELECT CASE
-  WHEN (SELECT "notnull" FROM pragma_table_info('employees') WHERE name='department_id') <> 0
-  THEN RAISE(ABORT, 'employees.department_id must be nullable')
-END;
-
-SELECT CASE
-  WHEN (SELECT COUNT(*) FROM regions) = 0
-    OR (SELECT COUNT(*) FROM countries) = 0
-    OR (SELECT COUNT(*) FROM locations) = 0
-    OR (SELECT COUNT(*) FROM departments) = 0
-    OR (SELECT COUNT(*) FROM jobs) = 0
-    OR (SELECT COUNT(*) FROM employees) = 0
-    OR (SELECT COUNT(*) FROM dependents) = 0
-  THEN RAISE(ABORT, 'sample data was not loaded completely')
-END;
-SQL
+for table in regions countries locations departments jobs employees dependents; do
+  rows="$(sqlite3 "$DB" "SELECT COUNT(*) FROM $table;")"
+  [[ "$rows" -gt 0 ]] || fail "$table contains no sample rows"
+done
 
 echo "SQLite schema/data test passed; foreign_key_check returned no violations."
