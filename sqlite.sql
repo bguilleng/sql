@@ -3,6 +3,8 @@ PRAGMA foreign_keys = ON;
 -- SQLite creates/opens the database file from the sqlite3 command line.
 -- Example: sqlite3 sqlcourse.db < sqlite.sql
 
+BEGIN TRANSACTION;
+
 CREATE TABLE regions (
     region_id INTEGER PRIMARY KEY AUTOINCREMENT,
     region_name TEXT
@@ -63,3 +65,5 @@ CREATE TABLE dependents (
     employee_id INTEGER NOT NULL,
     FOREIGN KEY (employee_id) REFERENCES employees (employee_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
+
+COMMIT;
