@@ -1,3 +1,7 @@
+-- Ejecutar después de sqlite.sql, fuera de una transacción existente.
+PRAGMA foreign_keys = ON;
+BEGIN TRANSACTION;
+
 /*Data for the table regions */
 
 INSERT INTO regions(region_id,region_name) VALUES (1,'Europe');
@@ -159,3 +163,5 @@ INSERT INTO dependents(dependent_id,first_name,last_name,relationship,employee_i
 INSERT INTO dependents(dependent_id,first_name,last_name,relationship,employee_id) VALUES (28,'Woody','Russell','Child',145);
 INSERT INTO dependents(dependent_id,first_name,last_name,relationship,employee_id) VALUES (29,'Alec','Partners','Child',146);
 INSERT INTO dependents(dependent_id,first_name,last_name,relationship,employee_id) VALUES (30,'Sandra','Taylor','Child',176);
+
+COMMIT;
